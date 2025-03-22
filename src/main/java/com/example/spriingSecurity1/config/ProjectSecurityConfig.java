@@ -18,8 +18,8 @@ public class ProjectSecurityConfig {
         /*http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());*/
         http.authorizeHttpRequests((requests) -> requests.requestMatchers("/myAccount","/myBalance","/myLoans","/myCards").authenticated()
                 .requestMatchers("notices","contact","error").permitAll());
-        http.formLogin(withDefaults());
-        http.httpBasic(withDefaults());
+        http.formLogin(flc -> flc.disable()); //httpSecurityFormLoginConfigurer
+        http.httpBasic(hbc -> hbc.disable()); //httpSecurityHttpBasicConfigurer
         return http.build();
     }
 }
