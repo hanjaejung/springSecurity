@@ -18,7 +18,13 @@ import java.util.List;
 public class EasyBankDetailService implements UserDetailsService {
 
     private final CustomerRepository customerRepository;
+    //Authentication 인터페이스는 사용자의 세부정보를 저장하고 검색하는 메서드를 포함
+    //UserDetailsManager 인터페이스 사용자 세부 정보를 생성,업데이트,삭제 하는 메서드 제공
+    //UserDetailsService 사용자별 데이터 로드
+    //UserDetails 인터페이스 인증관련 겟유저네임,겟패스워드,기한 만료 등이며 이메일 인증등은 아니다
+    //Authentication 인터페이스 사용자의 세부정보를 저장하고 검색하는 메서드를 포함
 
+    //UserDetailsService 인터페이스의 사용자 지정 구현(이 부분이 유저세션 생성?)
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Customer customer = customerRepository.findByEmail(username).orElseThrow(() -> new
