@@ -25,6 +25,8 @@ public class EasyBankDetailService implements UserDetailsService {
     //Authentication 인터페이스 사용자의 세부정보를 저장하고 검색하는 메서드를 포함
 
     //UserDetailsService 인터페이스의 사용자 지정 구현(이 부분이 유저세션 생성?)
+    //UserDetailsService의 loadUserByUsername는 사용자 이름을 기준으로 사용자를 찾습니다
+    //리턴값으로 세션에 저장
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Customer customer = customerRepository.findByEmail(username).orElseThrow(() -> new

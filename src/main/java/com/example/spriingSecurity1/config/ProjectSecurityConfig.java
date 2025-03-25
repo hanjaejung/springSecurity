@@ -14,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.password.HaveIBeenPwnedRestApiPasswordChecker;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,36 @@ public class ProjectSecurityConfig {
         http.httpBasic(withDefaults());
         return http.build();
     }
+
+    /* 이 부분이 헷갈렸지만 드디어 정리 이부분은 UserDetails로 유저 생성 후
+       스프링 부트 어플리케이션의 메모리내에 사용자를 정의하는것
+    @Bean
+    public UserDetailsService userDetailsService(){
+        UserDetails user = User.withUsername("testUser")
+                .password("{noop}1111").authorities("read").build();
+        UserDetails admin = User.withUsername("admin")
+                .password("{bcrypt}$2a$12$qjQ9WlqkBOvJ1JC4RByGpuervyzYzO7ljilimw22J06TDXxc0tiL2").authorities("admin").build();
+
+        return new InMemoryUserDetailsManager(user, admin); //userDetails 객체 전달,  어플리케이셔 메모리내에 사용자 세부내용 저장
+        //여러명의 사용자 받아드릴수 있다
+    }
+    */
+
+    /*
+    JdbcUserDetailsManager는 UserDetailsService 인터페이스의 구현체로, JDBC를 사용하여 데이터베이스에서 사용자 세부 정보를 조회함으로써
+     사용자 인증 및 권한 부여를 제공합니다
+     즉 위의 주석은 데이터베이스 사용전 직접 스프링 부트에서 사용자를 생성해서
+     스프링부트 메모리내에 생성한것이며
+     이것은 드디어 데이터베이스에 저장되어 있던걸 조회하는 용도이다
+     이 부분이 주석처리된 이유는 EasyBankSecurityDetailService클래스에
+     UserDetailsService를 구현했기 때문이다 두번이상 등록하면 스프링 부트가 어떤
+     걸 잡아야 할지 몰라 에러가 난다고 선생님이 말씀하셨다
+     @Bean
+     public UserDetailsService userDetailsService(DataSource dataSource){
+         return new JdbcUserDetailsManager(dataSource);
+     }
+     */
+
 
     @Bean
     public PasswordEncoder passwordEncoder(){
