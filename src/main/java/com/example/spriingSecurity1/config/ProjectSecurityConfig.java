@@ -70,6 +70,8 @@ public class ProjectSecurityConfig {
      */
 
 
+    //createDelegatingPasswordEncoder를 사용하면 스프링 시큐리티에서 새로운
+    //비밀번호가 등장하더라도 코드 변경을 할 필요가없다
     @Bean
     public PasswordEncoder passwordEncoder(){
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
