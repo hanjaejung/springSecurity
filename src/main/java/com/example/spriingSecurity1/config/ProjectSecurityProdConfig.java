@@ -24,7 +24,7 @@ public class ProjectSecurityProdConfig {
         /*http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());*/
         http.sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession").maximumSessions(3).maxSessionsPreventsLogin(true)) //세션 시간 지났을시 이동되는 페이지 따로 /invalidSession에 대한 페이지를 설정하면 그쪽으로 이동한다 설정하는 페이지가 없으면 /invalidSession에 대한 잘못된 세션으로 리디렌션 된다
                 //동시 세션 부분 추가
-                .requiresChannel(rcc-> rcc.anyRequest().requiresSecure()) //Only HTTPS
+                .requiresChannel(rcc-> rcc.anyRequest().requiresInsecure()) //Only HTTPS
                 .csrf(csrfConfig->csrfConfig.disable())
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
                 //데이터 변경 api 같은 경우에 예)post,put,delete에 대해서는 csrf 강제 보호 될것이다
