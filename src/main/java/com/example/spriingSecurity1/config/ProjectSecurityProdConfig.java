@@ -1,5 +1,7 @@
 package com.example.spriingSecurity1.config;
 
+import com.example.spriingSecurity1.ExceptionHandling.CustomAccessDeniedHandler;
+import com.example.spriingSecurity1.ExceptionHandling.CustomBasicAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -20,13 +22,16 @@ public class ProjectSecurityProdConfig {
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
        /* http.authorizeHttpRequests((requests) -> requests.anyRequest().permitAll());*/
         /*http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());*/
-        http.csrf(csrfConfig->csrfConfig.disable())
+        http.sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession")) //세션 시간 지났을시 이동되는 페이지 따로 /invalidSession에 대한 페이지를 설정하면 그쪽으로 이동한다 설정하는 페이지가 없으면 /invalidSession에 대한 잘못된 세션으로 리디렌션 된다
+                .requiresChannel(rcc-> rcc.anyRequest().requiresSecure()) //Only HTTPS
+                .csrf(csrfConfig->csrfConfig.disable())
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
                 //데이터 변경 api 같은 경우에 예)post,put,delete에 대해서는 csrf 강제 보호 될것이다
                 .authorizeHttpRequests((requests) -> requests.requestMatchers("/myAccount","/myBalance","/myLoans","/myCards").authenticated()
                 .requestMatchers("/notices","/contact","/error","/register").permitAll());
         http.formLogin(withDefaults());
-        http.httpBasic(withDefaults());
+        http.httpBasic(hbc->hbc.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint())); //401 에러 재정의시 이런식으로 httpBasic 메소드 수정 필요
+        http.exceptionHandling(ehc -> ehc.accessDeniedHandler(new CustomAccessDeniedHandler())); // 403 에러는 전역적으로 설정해야 합니다
         return http.build();
     }
 
