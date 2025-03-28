@@ -1,15 +1,28 @@
 package com.example.spriingSecurity1.controller;
 
+import com.example.spriingSecurity1.model.AccountTransactions;
+import com.example.spriingSecurity1.repository.AccountTransactionsRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
+@RequiredArgsConstructor
 public class BalanceController {
 
-    @GetMapping("/myBalance") //의존성에 시큐리티만 추가해도 /welcome 접속시 로그인해야 한다
-    public String getBalanceDetails(){
+    private final AccountTransactionsRepository accountTransactionsRepository;
 
-        return "Here are the balance details from the DB";
+    @GetMapping("/myBalance")
+    public List<AccountTransactions> getBalanceDetails(@RequestParam long id) {
+        List<AccountTransactions> accountTransactions = accountTransactionsRepository.
+                findByCustomerIdOrderByTransactionDtDesc(id);
+        if (accountTransactions != null) {
+            return accountTransactions;
+        } else {
+            return null;
+        }
     }
-
 }

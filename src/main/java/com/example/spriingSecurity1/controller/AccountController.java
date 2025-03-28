@@ -1,15 +1,26 @@
 package com.example.spriingSecurity1.controller;
 
+import com.example.spriingSecurity1.model.Accounts;
+import com.example.spriingSecurity1.repository.AccountsRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 public class AccountController {
 
-    @GetMapping("/myAccount") //의존성에 시큐리티만 추가해도 /welcome 접속시 로그인해야 한다
-    public String getAccountDetails(){
+    private final AccountsRepository accountsRepository;
 
-        return "Here are the account details from the DB";
+    @GetMapping("/myAccount")
+    public Accounts getAccountDetails(@RequestParam long id) {
+        Accounts accounts = accountsRepository.findByCustomerId(id);
+        if (accounts != null) {
+            return accounts;
+        } else {
+            return null;
+        }
     }
 
 }
