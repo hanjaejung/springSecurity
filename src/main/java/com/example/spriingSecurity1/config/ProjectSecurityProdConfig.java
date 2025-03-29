@@ -2,6 +2,7 @@ package com.example.spriingSecurity1.config;
 
 import com.example.spriingSecurity1.ExceptionHandling.CustomAccessDeniedHandler;
 import com.example.spriingSecurity1.ExceptionHandling.CustomBasicAuthenticationEntryPoint;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -11,6 +12,10 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.password.HaveIBeenPwnedRestApiPasswordChecker;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.Collections;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -22,9 +27,21 @@ public class ProjectSecurityProdConfig {
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
        /* http.authorizeHttpRequests((requests) -> requests.anyRequest().permitAll());*/
         /*http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());*/
-        http.sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession").maximumSessions(3).maxSessionsPreventsLogin(true)) //세션 시간 지났을시 이동되는 페이지 따로 /invalidSession에 대한 페이지를 설정하면 그쪽으로 이동한다 설정하는 페이지가 없으면 /invalidSession에 대한 잘못된 세션으로 리디렌션 된다
+        http.cors(corsConfig->corsConfig.configurationSource(new CorsConfigurationSource() {
+                    @Override
+                    public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                        CorsConfiguration config = new CorsConfiguration();
+                        config.setAllowedOrigins(Collections.singletonList("https://localhost:4200"));
+                        config.setAllowedMethods(Collections.singletonList("*"));
+                        config.setAllowCredentials(true);
+                        config.setAllowedHeaders(Collections.singletonList("*"));
+                        config.setMaxAge(3600L);
+                        return config;
+                    }
+                }))
+                .sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession").maximumSessions(3).maxSessionsPreventsLogin(true)) //세션 시간 지났을시 이동되는 페이지 따로 /invalidSession에 대한 페이지를 설정하면 그쪽으로 이동한다 설정하는 페이지가 없으면 /invalidSession에 대한 잘못된 세션으로 리디렌션 된다
                 //동시 세션 부분 추가
-                .requiresChannel(rcc-> rcc.anyRequest().requiresInsecure()) //Only HTTPS
+                .requiresChannel(rcc-> rcc.anyRequest().requiresSecure()) //Only HTTPS
                 .csrf(csrfConfig->csrfConfig.disable())
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
                 //데이터 변경 api 같은 경우에 예)post,put,delete에 대해서는 csrf 강제 보호 될것이다
