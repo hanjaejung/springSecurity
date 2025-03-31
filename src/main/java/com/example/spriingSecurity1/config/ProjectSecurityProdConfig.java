@@ -2,16 +2,21 @@ package com.example.spriingSecurity1.config;
 
 import com.example.spriingSecurity1.ExceptionHandling.CustomAccessDeniedHandler;
 import com.example.spriingSecurity1.ExceptionHandling.CustomBasicAuthenticationEntryPoint;
+import com.example.spriingSecurity1.filter.CsrfCookieFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.password.CompromisedPasswordChecker;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.password.HaveIBeenPwnedRestApiPasswordChecker;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -27,7 +32,11 @@ public class ProjectSecurityProdConfig {
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
        /* http.authorizeHttpRequests((requests) -> requests.anyRequest().permitAll());*/
         /*http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());*/
-        http.cors(corsConfig->corsConfig.configurationSource(new CorsConfigurationSource() {
+        CsrfTokenRequestAttributeHandler csrfTokenRequestAttributeHandler = new CsrfTokenRequestAttributeHandler();
+        //이제부터 사용자 로그인 시키기 위해 자격증명을 받아 HttpBasic 형식으로 백엔드 서버에 전송 이러한 시나리오에서 스프링 시큐리티는 jsessionId를 생성하지 않는다 스프링 시큐리티에서 명시적으로 요청위해 아래의 2줄 코드를 작성
+        http.securityContext(contextConfig->contextConfig.requireExplicitSave(false)) //jsessionId 세부정보나 로그인된 인증 세부정부를 SecurityContextHolder에 저장하지 않겠다는 것
+                .sessionManagement(sessionConfig->sessionConfig.sessionCreationPolicy(SessionCreationPolicy.ALWAYS))
+                .cors(corsConfig->corsConfig.configurationSource(new CorsConfigurationSource() {
                     @Override
                     public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
                         CorsConfiguration config = new CorsConfiguration();
@@ -39,10 +48,13 @@ public class ProjectSecurityProdConfig {
                         return config;
                     }
                 }))
-                .sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession").maximumSessions(3).maxSessionsPreventsLogin(true)) //세션 시간 지났을시 이동되는 페이지 따로 /invalidSession에 대한 페이지를 설정하면 그쪽으로 이동한다 설정하는 페이지가 없으면 /invalidSession에 대한 잘못된 세션으로 리디렌션 된다
                 //동시 세션 부분 추가
+                .csrf(csrfConfig->csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler)
+                        .ignoringRequestMatchers("/contact","/register") //csrf 보호를 무시한다는 뜻
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
+                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class) //기본 인증 필터 실행이 완료된 후 실행
                 .requiresChannel(rcc-> rcc.anyRequest().requiresSecure()) //Only HTTPS
-                .csrf(csrfConfig->csrfConfig.disable())
+                //.csrf(csrfConfig->csrfConfig.disable()) 이거에 대한 설명 아래
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
                 //데이터 변경 api 같은 경우에 예)post,put,delete에 대해서는 csrf 강제 보호 될것이다
                 .authorizeHttpRequests((requests) -> requests.requestMatchers("/myAccount","/myBalance","/myLoans","/myCards","/user").authenticated()
