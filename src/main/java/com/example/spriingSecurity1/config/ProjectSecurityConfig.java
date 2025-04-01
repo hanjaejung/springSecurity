@@ -72,10 +72,15 @@ public class ProjectSecurityConfig {
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
                 //데이터 변경 api 같은 경우에 예)post,put,delete에 대해서는 csrf 강제 보호 될것이다
                 .authorizeHttpRequests((requests) -> requests
-                                .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT") //권한테이블에 따른 권한 부여
+                               /* .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT") //권한테이블에 따른 권한 부여
                         .requestMatchers("/myBalance").hasAnyAuthority("VIEWBALANCE","VIEWACCOUNT") //권한을 하나만 가지고 있더라도 다른 권한도 볼수 있어야 할떄 쓴다
                         .requestMatchers("/myLoans").hasAuthority("VIEWLOANS")
                         .requestMatchers("/myCards").hasAuthority("VIEWCARDS")
+                        .requestMatchers("/user").authenticated()*/
+                        .requestMatchers("/myAccount").hasRole("USER")
+                        .requestMatchers("/myBalance").hasAnyRole("USER","ADMIN")
+                        .requestMatchers("/myLoans").hasRole("USER")
+                        .requestMatchers("/myCards").hasRole("USER")
                         .requestMatchers("/user").authenticated()
                 .requestMatchers("/notices","/contact","/error","/register", "/invalidSession").permitAll());
         http.formLogin(withDefaults());
