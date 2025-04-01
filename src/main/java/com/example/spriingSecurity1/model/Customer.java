@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.sql.Date;
+import java.util.Set;
 
 @Entity
 @Getter @Setter
@@ -33,4 +34,7 @@ public class Customer {
     @JsonIgnore
     private Date createDt;
 
+    @OneToMany(mappedBy = "customer", fetch = FetchType.EAGER)
+    @JsonIgnore //이 어노테이션은 벡앤드에서만 데이터를 처리하고 ui에는 절대로 데이터를 보내지 않겠다는 뜻
+    private Set<Authority> authorities;
 }
