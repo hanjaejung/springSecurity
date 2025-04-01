@@ -71,7 +71,12 @@ public class ProjectSecurityConfig {
                 //.csrf(csrfConfig->csrfConfig.disable())
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
                 //데이터 변경 api 같은 경우에 예)post,put,delete에 대해서는 csrf 강제 보호 될것이다
-                .authorizeHttpRequests((requests) -> requests.requestMatchers("/myAccount","/myBalance","/myLoans","/myCards","/user").authenticated()
+                .authorizeHttpRequests((requests) -> requests
+                                .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT") //권한테이블에 따른 권한 부여
+                        .requestMatchers("/myBalance").hasAnyAuthority("VIEWBALANCE","VIEWACCOUNT") //권한을 하나만 가지고 있더라도 다른 권한도 볼수 있어야 할떄 쓴다
+                        .requestMatchers("/myLoans").hasAuthority("VIEWLOANS")
+                        .requestMatchers("/myCards").hasAuthority("VIEWCARDS")
+                        .requestMatchers("/user").authenticated()
                 .requestMatchers("/notices","/contact","/error","/register", "/invalidSession").permitAll());
         http.formLogin(withDefaults());
         http.httpBasic(hbc->hbc.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint())); //401 에러 재정의시 이런식으로 httpBasic 메소드 수정 필요
