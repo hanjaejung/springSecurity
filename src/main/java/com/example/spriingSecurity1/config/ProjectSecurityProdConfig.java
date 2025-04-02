@@ -2,6 +2,8 @@ package com.example.spriingSecurity1.config;
 
 import com.example.spriingSecurity1.ExceptionHandling.CustomAccessDeniedHandler;
 import com.example.spriingSecurity1.ExceptionHandling.CustomBasicAuthenticationEntryPoint;
+import com.example.spriingSecurity1.filter.AuthoritiesLoggingAfterFilter;
+import com.example.spriingSecurity1.filter.AuthoritiesLoggingAtFilter;
 import com.example.spriingSecurity1.filter.CsrfCookieFilter;
 import com.example.spriingSecurity1.filter.RequestValidationBeforeFilter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,6 +56,8 @@ public class ProjectSecurityProdConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class) //기본 인증 필터 실행이 완료된 후 실행
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
+                .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
+                .addFilterAt(new AuthoritiesLoggingAtFilter(), BasicAuthenticationFilter.class)
                 .requiresChannel(rcc-> rcc.anyRequest().requiresSecure()) //Only HTTPS
                 //.csrf(csrfConfig->csrfConfig.disable()) 이거에 대한 설명 아래
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
