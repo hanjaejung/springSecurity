@@ -2,10 +2,7 @@ package com.example.spriingSecurity1.config;
 
 import com.example.spriingSecurity1.ExceptionHandling.CustomAccessDeniedHandler;
 import com.example.spriingSecurity1.ExceptionHandling.CustomBasicAuthenticationEntryPoint;
-import com.example.spriingSecurity1.filter.AuthoritiesLoggingAfterFilter;
-import com.example.spriingSecurity1.filter.AuthoritiesLoggingAtFilter;
-import com.example.spriingSecurity1.filter.CsrfCookieFilter;
-import com.example.spriingSecurity1.filter.RequestValidationBeforeFilter;
+import com.example.spriingSecurity1.filter.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +20,7 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -33,12 +31,19 @@ public class ProjectSecurityProdConfig {
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        //로그인 순서
+        //1. 클라이언트가 유저이름과 비밀번호 요청
+        //2. 서버에서 유저이름과 비밀번호를 받고 인증이 성공하면 토큰을 클라이언트에 발급한다
+        //3. 클라이언트 어플리케이션은 보안 api에 접근할때마다 동일한 토큰을 백엔드 서버로 보낸다 이토큰이 유효하다면 백엔드 서버는 적절한 성공응답을 제공
        /* http.authorizeHttpRequests((requests) -> requests.anyRequest().permitAll());*/
         /*http.authorizeHttpRequests((requests) -> requests.anyRequest().denyAll());*/
         CsrfTokenRequestAttributeHandler csrfTokenRequestAttributeHandler = new CsrfTokenRequestAttributeHandler();
         //이제부터 사용자 로그인 시키기 위해 자격증명을 받아 HttpBasic 형식으로 백엔드 서버에 전송 이러한 시나리오에서 스프링 시큐리티는 jsessionId를 생성하지 않는다 스프링 시큐리티에서 명시적으로 요청위해 아래의 2줄 코드를 작성
-        http.securityContext(contextConfig->contextConfig.requireExplicitSave(false)) //jsessionId 세부정보나 로그인된 인증 세부정부를 SecurityContextHolder에 저장하지 않겠다는 것
-                .sessionManagement(sessionConfig->sessionConfig.sessionCreationPolicy(SessionCreationPolicy.ALWAYS))
+        //jsessionId는 톰캣에서 생성하는 거였다
+        //jsessionId는 쓰지 않으니 주석처리
+        //http.securityContext(contextConfig->contextConfig.requireExplicitSave(false)) //jsessionId 세부정보나 로그인된 인증 세부정부를 SecurityContextHolder에 저장하지 않겠다는 것
+
+        http.sessionManagement(sessionConfig->sessionConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(corsConfig->corsConfig.configurationSource(new CorsConfigurationSource() {
                     @Override
                     public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
@@ -47,6 +52,7 @@ public class ProjectSecurityProdConfig {
                         config.setAllowedMethods(Collections.singletonList("*"));
                         config.setAllowCredentials(true);
                         config.setAllowedHeaders(Collections.singletonList("*"));
+                        config.setExposedHeaders(Arrays.asList("Authorization"));
                         config.setMaxAge(3600L);
                         return config;
                     }
@@ -58,6 +64,8 @@ public class ProjectSecurityProdConfig {
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
                 .addFilterAt(new AuthoritiesLoggingAtFilter(), BasicAuthenticationFilter.class)
+                .addFilterAfter(new JWTTokenGeneratorFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(new JWTTokenValidatorFilter(), BasicAuthenticationFilter.class)
                 .requiresChannel(rcc-> rcc.anyRequest().requiresSecure()) //Only HTTPS
                 //.csrf(csrfConfig->csrfConfig.disable()) 이거에 대한 설명 아래
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
