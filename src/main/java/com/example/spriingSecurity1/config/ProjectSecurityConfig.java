@@ -3,6 +3,7 @@ package com.example.spriingSecurity1.config;
 import com.example.spriingSecurity1.ExceptionHandling.CustomAccessDeniedHandler;
 import com.example.spriingSecurity1.ExceptionHandling.CustomBasicAuthenticationEntryPoint;
 import com.example.spriingSecurity1.filter.CsrfCookieFilter;
+import com.example.spriingSecurity1.filter.RequestValidationBeforeFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
@@ -39,7 +40,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @Profile("!prod")
 public class ProjectSecurityConfig {
-
+    //필터 순서 1. CorsFilter 2. CsrfFilter 3. RequestValidationFilter(커스텀필터) 4. BasicAuthenticationFilter 실제로 순서가 다를 수 있다
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
        /* http.authorizeHttpRequests((requests) -> requests.anyRequest().permitAll());*/
@@ -61,12 +62,12 @@ public class ProjectSecurityConfig {
                         return config;
                     }
                 }))
-                //동시 세션 부분 추가
                 .csrf(csrfConfig->csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler) //csrf 공격 해결책 소스
                         .ignoringRequestMatchers("/contact","/register") //csrf 보호를 무시한다는 뜻
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
                 //withHttpOnlyFalse 이거는 자바스크립트 코드의 클라이언트 어플리케이션이 쿠키를 읽을수 있개 해준다
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
                 .requiresChannel(rcc-> rcc.anyRequest().requiresInsecure()) //Only HTTP
                 //.csrf(csrfConfig->csrfConfig.disable())
                 //http get은 데이터를 읽기만 해서 csrf 보호를 강제하지 않는다
