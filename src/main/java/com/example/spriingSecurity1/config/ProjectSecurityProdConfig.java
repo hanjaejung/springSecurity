@@ -136,8 +136,8 @@ public class ProjectSecurityProdConfig {
     @Bean
     public AuthenticationManager authenticationManager(UserDetailsService userDetailsService,
                                                        PasswordEncoder passwordEncoder){
-        EasyBankUsernamePwdAuthenticationProvider authenticationProvider =
-                new EasyBankUsernamePwdAuthenticationProvider(userDetailsService, passwordEncoder);
+        EasyBankProdUsernamePwdAuthenticationProvider authenticationProvider =
+                new EasyBankProdUsernamePwdAuthenticationProvider(userDetailsService, passwordEncoder);
         ProviderManager providerManager = new ProviderManager(authenticationProvider);
         providerManager.setEraseCredentialsAfterAuthentication(false); //ProviderManager는 객체 내부의 비밀번호를 지우지 않겠다는 뜻
         return  providerManager;
