@@ -20,7 +20,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 
 //로그인 작업 중에만 실행
-public class JWTTokenGeneratorFilter extends OncePerRequestFilter { //OncePerRequestFilter 필터가 한번만 실행
+public class JWTTokenGeneratorFilter extends OncePerRequestFilter { //OncePerRequestFilter 필터가 한번만 실행, 각 http 요청당 한번만 실행된다는 뜻
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -44,7 +44,7 @@ public class JWTTokenGeneratorFilter extends OncePerRequestFilter { //OncePerReq
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException { //단순히 false일때만 실행
         return !request.getServletPath().equals("/user"); //특정 시나리오에서 이 필터를 실행하지 말아야 한다
     }
 }
