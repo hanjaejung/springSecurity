@@ -7,9 +7,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.password.CompromisedPasswordChecker;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -58,7 +61,7 @@ public class ProjectSecurityProdConfig {
                     }
                 }))
                 .csrf(csrfConfig->csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler)
-                        .ignoringRequestMatchers("/contact","/register") //csrf 보호를 무시한다는 뜻
+                        .ignoringRequestMatchers("/contact","/register", "/apiLogin") //csrf 보호를 무시한다는 뜻
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class) //기본 인증 필터 실행이 완료된 후 실행
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
@@ -81,7 +84,7 @@ public class ProjectSecurityProdConfig {
                         .requestMatchers("/myLoans").hasRole("USER")
                         .requestMatchers("/myCards").hasRole("USER")
                         .requestMatchers("/user").authenticated()
-                .requestMatchers("/notices","/contact","/error","/register", "/invalidSession").permitAll());
+                .requestMatchers("/notices","/contact","/error","/register", "/invalidSession", "/apiLogin").permitAll());
         http.formLogin(withDefaults());
         http.httpBasic(hbc->hbc.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint())); //401 에러 재정의시 이런식으로 httpBasic 메소드 수정 필요
         http.exceptionHandling(ehc -> ehc.accessDeniedHandler(new CustomAccessDeniedHandler())); // 403 에러는 전역적으로 설정해야 합니다
@@ -128,5 +131,15 @@ public class ProjectSecurityProdConfig {
     @Bean
     public CompromisedPasswordChecker compromisedPasswordChecker(){
         return new HaveIBeenPwnedRestApiPasswordChecker();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService,
+                                                       PasswordEncoder passwordEncoder){
+        EasyBankUsernamePwdAuthenticationProvider authenticationProvider =
+                new EasyBankUsernamePwdAuthenticationProvider(userDetailsService, passwordEncoder);
+        ProviderManager providerManager = new ProviderManager(authenticationProvider);
+        providerManager.setEraseCredentialsAfterAuthentication(false); //ProviderManager는 객체 내부의 비밀번호를 지우지 않겠다는 뜻
+        return  providerManager;
     }
 }

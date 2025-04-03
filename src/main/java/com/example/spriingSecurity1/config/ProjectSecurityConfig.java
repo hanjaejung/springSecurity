@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.password.CompromisedPasswordChecker;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -69,7 +71,7 @@ public class ProjectSecurityConfig {
                     }
                 }))
                 .csrf(csrfConfig->csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler) //csrf 공격 해결책 소스
-                        .ignoringRequestMatchers("/contact","/register") //csrf 보호를 무시한다는 뜻
+                        .ignoringRequestMatchers("/contact","/register","/apiLogin") //csrf 보호를 무시한다는 뜻
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
                 //withHttpOnlyFalse 이거는 자바스크립트 코드의 클라이언트 어플리케이션이 쿠키를 읽을수 있개 해준다
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class) //기본 인증 필터 실행이 완료된 후 실행
@@ -93,9 +95,28 @@ public class ProjectSecurityConfig {
                         .requestMatchers("/myLoans").hasRole("USER")
                         .requestMatchers("/myCards").hasRole("USER")
                         .requestMatchers("/user").authenticated()
-                .requestMatchers("/notices","/contact","/error","/register", "/invalidSession").permitAll());
+                .requestMatchers("/notices","/contact","/error","/register", "/invalidSession","/apiLogin").permitAll());
         http.formLogin(withDefaults());
         http.httpBasic(hbc->hbc.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint())); //401 에러 재정의시 이런식으로 httpBasic 메소드 수정 필요
+        //진짜 충격이다 http.httpBasic() 이거만 표시한것만 해도 http.httpBasic()을 enable했다는 뜻
+        //http.httpBasic()을 enable 하면 BasicAuthenticationFilter을 사용할 수 있다
+        //BasicAuthenticationFilter을 사용하면 BasicAuthenticationFilter가 이를 가로채 인증을 진행
+        //Authentication header를 이용하여 Basic {token} 값을 전달하여 인증을 하는 방식
+        //token 값은 username:password를 BASE64로 인코딩하여 전달되는 값을 Filter에서 decode하여 인증을 진행
+        //난 처음에 /user api에 어떻게 Authenticaton을 입력으로 받지? 궁금했는데 그래서 프론트에서 Athentication을 넣어서 주나? 했는데
+        //강의를 봐도 안 그런거 같았다
+        //확인해보니 먼저 그걸 가로챈다고 했다 구글 검색하니 그게 BasicAuthenticationFilter 였다
+        //그리고 위에 설정한 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
+        //이부분이 사실 BasicAuthenticationFilter에 doFilterInternal을 통해서 인증을 진행하며
+        //BasicAuthenticationConverter에서 convert메소드를 거의 그대로 붙여넣은 부분이었다
+        //그리고 UsernamePasswordAuthenticationToken에 username : password 이런식으로 저장되어
+        //BasicAuthenticationFilter로 돌아와서, authenticationManager를 통해서 인증 과정을 수행
+        //그다음 SecurityContextHolder에 인증된 Authentication 객체를 저장해서
+        //위의 작업이 먼저 진행되어서 /user에 Authentication으로 전달이 가능해진거다
+        //이제 이해된다 대박이다
+        //그래서 /apiLogin으로 새로 작성된 걸 보면 api 테스트를 진행했을때
+        //Authentication을 만들어야 하니 authenticationManager를 쓰는게 나오는 거였다
+        //이상 로그인할때 어떻게 저절로 Authentication에 유저네임과 패스워드가 들어오는 거지에 대한 궁금증이 해결되었다
         http.exceptionHandling(ehc -> ehc.accessDeniedHandler(new CustomAccessDeniedHandler())); // 403 에러는 전역적으로 설정해야 합니다
         return http.build();
     }
@@ -140,5 +161,15 @@ public class ProjectSecurityConfig {
     @Bean
     public CompromisedPasswordChecker compromisedPasswordChecker(){
         return new HaveIBeenPwnedRestApiPasswordChecker();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService,
+                                                       PasswordEncoder passwordEncoder){
+        EasyBankUsernamePwdAuthenticationProvider authenticationProvider =
+                new EasyBankUsernamePwdAuthenticationProvider(userDetailsService, passwordEncoder);
+        ProviderManager providerManager = new ProviderManager(authenticationProvider);
+        providerManager.setEraseCredentialsAfterAuthentication(false); //ProviderManager는 객체 내부의 비밀번호를 지우지 않겠다는 뜻
+        return  providerManager;
     }
 }
