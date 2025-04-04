@@ -61,8 +61,8 @@ public class ProjectSecurityConfig {
                     @Override
                     public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
                         CorsConfiguration config = new CorsConfiguration();
-                        config.setAllowedOrigins(Collections.singletonList("http://localhost:4200"));
-                        config.setAllowedMethods(Collections.singletonList("*"));
+                        config.setAllowedOrigins(Collections.singletonList("http://localhost:4200")); //access-control-allow-origin
+                        config.setAllowedMethods(Collections.singletonList("*")); //access-control-allow-methods 위에 거와 이줄 소스로 교차 출처 리소스 공유를 허용
                         config.setAllowCredentials(true);
                         config.setAllowedHeaders(Collections.singletonList("*"));
                         config.setExposedHeaders(Arrays.asList("Authorization"));
@@ -70,11 +70,21 @@ public class ProjectSecurityConfig {
                         return config;
                     }
                 }))
-                .csrf(csrfConfig->csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler) //csrf 공격 해결책 소스
-                        .ignoringRequestMatchers("/contact","/register","/apiLogin") //csrf 보호를 무시한다는 뜻
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
-                //withHttpOnlyFalse 이거는 자바스크립트 코드의 클라이언트 어플리케이션이 쿠키를 읽을수 있개 해준다
+                //csrf를 해결하려면 백엔드 서버가 요청이 원래 웹사이트에서 온 것인지 다름 웹사이트에서 온것인지 감지할 수 있을만큼 스마트 해야 한다
+                //즉 백엔드와는 다름 웹사이트에서 토큰을 가져가면 그걸 403 에러로 나오게 한다 오직 백엔드 웹사이트에서만 쿠키가 실행되게 한다
+                .csrf(csrfConfig->csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler)
+                        .ignoringRequestMatchers("/contact","/register","/apiLogin") //csrf 보호를 무시한다는 뜻 즉 csrf 토큰을 안보내도 된돠는 뜻
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())) //csrf 토큰을 쿠키로 저장하기로 했다 HttpSessionCsrfTokenRepository는 세션에 저장 한다는 것
+                //csrfTokenRepository 즐에 대한 설명이다 => 토큰이 백그라운드에서 느리게 생성이 되어 토큰을 수동으로 읽는게 필요 filter 생성이 필요
+                //withHttpOnlyFalse 이거는 ui프레임워크나 자바스크립트 코드의 클라이언트 어플리케이션이 쿠키를 읽을수 있개 해준다 true면은 부라우저에서만 읽을 수 있다
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class) //기본 인증 필터 실행이 완료된 후 실행
+                //csrfTokenRepository 줄은 로그인 작업 후 처음으로 csrf 토큰을 생성하는데에만 도움이 된다
+                //csrf의 후속검증이 필요
+                //사용자가 로그인을 하면 http.POST()를 사용하여 요청을 보낼 수 있다
+                //이때 csrf 필터가 발동 따라서 이 필터에 ui 어플리케이션에서 받은 요청에서 csrf 토큰 값을 어디서 읽어야 하는지 알려줘야 한다
+                //즉 로그인 후 모든 후속 작업에서 ui 애플리케이션은 요청 내부와 쿠키의 일부로 토큰 값을 보내야 한다
+                //쿠키는 브라우저가 처리하지만 요청 내부에 들어오는 토큰 값은 AttributeHandler가 읽어서 _csrf() 라는 속성 이름으로 요청 내부에 채워 넣을 것이다
+                //그래서 csrfConfig.csrfTokenRequestHandler(csrfTokenRequestAttributeHandler) 이와 같이 CsrfTokenRequestAttributeHandler 객체도 전달해야 합니다
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
                 .addFilterAt(new AuthoritiesLoggingAtFilter(), BasicAuthenticationFilter.class)
